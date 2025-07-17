@@ -114,42 +114,27 @@ class TodoViewTestCase(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
-    def test_update_get_success(self):
-        task = Task(title='original', due_at=timezone.make_aware(datetime(2024, 7, 1)))
-        task.save()
-
+    def test_delete_get_success(self):
+        task = Task.objects.create(title='to be deleted', due_at=timezone.now())
         client = Client()
-        response = client.get('/{}/update'.format(task.pk))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.templates[0].name, 'todo/edit.html')
-        self.assertEqual(response.context['task'], task)
-
-    def test_update_post_success(self):
-        task = Task(title='original', due_at=timezone.make_aware(datetime(2024, 7, 1)))
-        task.save()
-
-        client = Client()
-        updated_data = {
-            'title': 'updated',
-            'due_at': '2024-08-01 12:00:00'
-        }
-        response = client.post('/{}/update'.format(task.pk), updated_data)
+        response = client.get('/{}/delete'.format(task.pk))
 
         self.assertEqual(response.status_code, 302)
+        self.assertFalse(Task.objects.filter(pk=task.pk).exists())
 
-        task.refresh_from_db()
-        
-        self.assertEqual(task.title, 'updated')
-        self.assertEqual(task.due_at, timezone.make_aware(datetime(2024, 8, 1, 12, 0, 0)))
-
-    def test_update_get_notfound(self):
+    def test_delete_post_success(self):
+        task = Task.objects.create(title='to be deleted', due_at=timezone.now())
         client = Client()
-        response = client.get('/1/update')
+        response = client.post('/{}/delete'.format(task.pk))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Task.objects.filter(pk=task.pk).exists())
+
+    def test_delete_get_notfound(self):
+        client = Client()
+        response = client.get('/1/delete')
         self.assertEqual(response.status_code, 404)
 
-    def test_update_post_notfound(self):
+    def test_delete_post_notfound(self):
         client = Client()
-        data = {'title': 'new', 'due_at': '2024-08-01 12:00:00'}
-        response = client.post('/1/update', data)
+        response = client.post('/1/delete')
         self.assertEqual(response.status_code, 404)
